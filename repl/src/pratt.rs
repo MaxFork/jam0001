@@ -32,6 +32,24 @@ pub struct ParseRule {
     pub precedence: Precedence,
 }
 
+impl ParseRule {
+    pub fn get_next_precedence(&self) -> Precedence {
+        match self.precedence {
+            Precedence::None => Precedence::Assignment,
+            Precedence::Assignment => Precedence::Or,
+            Precedence::Or => Precedence::And,
+            Precedence::And => Precedence::Equality,
+            Precedence::Equality => Precedence::Comparison,
+            Precedence::Comparison => Precedence::Term,
+            Precedence::Term => Precedence::Factor,
+            Precedence::Factor => Precedence::Unary,
+            Precedence::Unary => Precedence::Call,
+            Precedence::Call => Precedence::Primary,
+            Precedence::Primary => Precedence::Primary,
+        }
+    }
+}
+
 pub fn get_rule(operator: &Token) -> ParseRule {
     match operator {
         Token::LeftParen => ParseRule {

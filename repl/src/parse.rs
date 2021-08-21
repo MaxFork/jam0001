@@ -56,7 +56,8 @@ impl<'source> Parser<'source> {
 
     fn binary(&mut self, left: Box<Expr>) -> ParserResult {
         let op = self.must_be_next(&[Token::Plus, Token::Minus, Token::Star, Token::Slash])?;
-        let right = Box::new(self.parse_precedence(Precedence::Unary)?);
+        let precedence = get_rule(&op).get_next_precedence();
+        let right = Box::new(self.parse_precedence(precedence)?);
         Ok(Expr::Binary { left, op, right })
     }
 
@@ -115,7 +116,7 @@ impl<'source> Parser<'source> {
     // since `match` is a reserved keyword in rust
     // I google-translated `match` to latin and
     // it says `par` so here it is
-    fn par(&mut self, tokens: &[Token]) -> bool {
+    fn _par(&mut self, tokens: &[Token]) -> bool {
         if let Some(token) = self.lexer.peek() {
             return tokens.iter().any(|k| k == token);
         }
@@ -186,6 +187,30 @@ mod tests {
         assert_eq!(
             parser.parse()?,
             Expr::Grouping(Box::new(Expr::Literal(Value::Num(1f64))))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn precedence() -> Result<(), Box<dyn std::error::Error>> {
+        let program = "1+2*3-4";
+        let mut parser = Parser::new(program);
+
+        assert_eq!(
+            parser.parse()?,
+            Expr::Binary {
+                left: Box::new(Expr::Binary {
+                    left: Box::new(Expr::Literal(Value::Num(1f64))),
+                    op: Token::Plus,
+                    right: Box::new(Expr::Binary {
+                        left: Box::new(Expr::Literal(Value::Num(2f64))),
+                        op: Token::Star,
+                        right: Box::new(Expr::Literal(Value::Num(3f64))),
+                    })
+                }),
+                op: Token::Minus,
+                right: Box::new(Expr::Literal(Value::Num(4f64))),
+            }
         );
         Ok(())
     }

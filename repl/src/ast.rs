@@ -3,6 +3,10 @@ use std::fmt;
 
 #[derive(Debug, PartialEq)]
 pub enum Stmt {
+    // Declarations
+    Var { name: String, value: Option<Expr> },
+
+    // Not Declaration
     Comment(String),
     Expr(Expr),
 }

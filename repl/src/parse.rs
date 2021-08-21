@@ -36,7 +36,26 @@ impl<'source> Parser<'source> {
     }
 
     fn declaration(&mut self) -> ParserResult {
+        if self.par(&[Token::Let]) {
+            return self.variable_declaration();
+        }
+
         self.statement()
+    }
+
+    fn variable_declaration(&mut self) -> ParserResult {
+        let _keyword = self.lexer.next(); // will use this later for error prompts
+        self.must_be_next(&[Token::Ident])?;
+        let name = self.lexer.slice().to_string();
+
+        let mut value: Option<Expr> = None;
+
+        if self.par(&[Token::Equal]) {
+            self.lexer.next();
+            value = Some(self.expression()?);
+        }
+
+        Ok(Stmt::Var { name, value })
     }
 
     fn statement(&mut self) -> ParserResult {

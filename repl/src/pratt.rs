@@ -23,7 +23,8 @@ pub enum ParseFn {
     Unary,
     Binary,
     Grouping,
-    Number,
+
+    Literal,
 }
 
 pub struct ParseRule {
@@ -67,18 +68,28 @@ pub fn get_rule(operator: &Token) -> ParseRule {
             infix: ParseFn::Binary,
             precedence: Precedence::Term,
         },
-        Token::Slash => ParseRule {
+        Token::Slash | Token::Star => ParseRule {
             prefix: ParseFn::None,
             infix: ParseFn::Binary,
             precedence: Precedence::Factor,
         },
-        Token::Star => ParseRule {
+        Token::Bang => ParseRule {
+            prefix: ParseFn::Unary,
+            infix: ParseFn::None,
+            precedence: Precedence::None,
+        },
+        Token::BangEqual | Token::EqualEqual => ParseRule {
             prefix: ParseFn::None,
             infix: ParseFn::Binary,
-            precedence: Precedence::Factor,
+            precedence: Precedence::Equality,
         },
-        Token::Num => ParseRule {
-            prefix: ParseFn::Number,
+        Token::Greater | Token::GreaterEqual | Token::Less | Token::LessEqual => ParseRule {
+            prefix: ParseFn::None,
+            infix: ParseFn::Binary,
+            precedence: Precedence::Comparison,
+        },
+        Token::True | Token::False | Token::Num | Token::Str | Token::Null => ParseRule {
+            prefix: ParseFn::Literal,
             infix: ParseFn::None,
             precedence: Precedence::None,
         },

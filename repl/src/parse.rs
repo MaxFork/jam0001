@@ -5,17 +5,17 @@ use thiserror::Error;
 
 #[derive(Debug, PartialEq)]
 pub enum Expr {
-    Unary {
-        op: Token,
-        expr: Box<Expr>,
-    },
     Binary {
         left: Box<Expr>,
         op: Token,
         right: Box<Expr>,
     },
-    Grouping(Box<Expr>),
+    Unary {
+        op: Token,
+        expr: Box<Expr>,
+    },
     Literal(Value),
+    Grouping(Box<Expr>),
 }
 
 #[derive(Error, Debug)]
@@ -30,7 +30,7 @@ pub enum ParserError {
     ExpectedExpression,
 
     #[error("type coercion error")]
-    Disconnect(#[from] std::num::ParseFloatError),
+    TypeCoercion(#[from] std::num::ParseFloatError),
 }
 
 pub type ParserResult = Result<Expr, ParserError>;
@@ -55,7 +55,18 @@ impl<'source> Parser<'source> {
     }
 
     fn binary(&mut self, left: Box<Expr>) -> ParserResult {
-        let op = self.must_be_next(&[Token::Plus, Token::Minus, Token::Star, Token::Slash])?;
+        let op = self.must_be_next(&[
+            Token::Plus,
+            Token::Minus,
+            Token::Star,
+            Token::Slash,
+            Token::EqualEqual,
+            Token::BangEqual,
+            Token::Greater,
+            Token::GreaterEqual,
+            Token::Less,
+            Token::LessEqual,
+        ])?;
         let precedence = get_rule(&op).get_next_precedence();
         let right = Box::new(self.parse_precedence(precedence)?);
         Ok(Expr::Binary { left, op, right })
@@ -67,14 +78,25 @@ impl<'source> Parser<'source> {
         Ok(Expr::Unary { op, expr })
     }
 
-    fn primary(&mut self, kind: ParseFn) -> ParserResult {
-        self.lexer.next();
-        match kind {
-            ParseFn::Number => Ok(Expr::Literal(Value::Num(
-                self.lexer.slice().parse::<f64>()?,
-            ))),
+    fn primary(&mut self) -> ParserResult {
+        let value = self.must_be_next(&[
+            Token::True,
+            Token::False,
+            Token::Num,
+            Token::Str,
+            Token::Null,
+        ])?;
+
+        let value = match value {
+            Token::True => Value::Bool(true),
+            Token::False => Value::Bool(false),
+            Token::Num => Value::Num(self.lexer.slice().parse()?),
+            Token::Str => Value::Str(self.lexer.slice().into()),
+            Token::Null => Value::Null,
             _ => unreachable!(),
-        }
+        };
+
+        Ok(Expr::Literal(value))
     }
 
     fn grouping(&mut self) -> ParserResult {
@@ -101,10 +123,10 @@ impl<'source> Parser<'source> {
     fn parse_by_rule(&mut self, rule: ParseFn, operand: Option<Box<Expr>>) -> ParserResult {
         match rule {
             ParseFn::Unary => self.unary(),
-            ParseFn::Binary => self.binary(operand.unwrap()),
+            ParseFn::Binary => self.binary(operand.ok_or(ParserError::ExpectedExpression)?),
             ParseFn::Grouping => self.grouping(),
-            literal @ ParseFn::Number => self.primary(literal),
-            _ => unreachable!(),
+            ParseFn::Literal => self.primary(),
+            ParseFn::None => unreachable!(),
         }
     }
 }

@@ -1,7 +1,38 @@
-use logos::{Lexer, Logos};
+use logos::{Lexer as LogosLexer, Logos};
 use std::fmt;
 
-fn lex_str(lex: &mut Lexer<Token>) -> Option<String> {
+struct Lexer<'source> {
+    lexer: LogosLexer<'source, Token>,
+    peeked: Option<Option<Token>>,
+}
+
+impl<'source> Lexer<'source> {
+    pub fn new(source: &'source str) -> Self {
+        Self {
+            lexer: Token::lexer(source),
+            peeked: None,
+        }
+    }
+
+    pub fn peek(&mut self) -> Option<&Token> {
+        let lexer = &mut self.lexer;
+        self.peeked.get_or_insert_with(|| lexer.next()).as_ref()
+    }
+}
+
+impl<'source> Iterator for Lexer<'source> {
+    type Item = Token;
+
+    fn next(&mut self) -> Option<Token> {
+        if let Some(peeked) = self.peeked.take() {
+            peeked
+        } else {
+            self.lexer.next()
+        }
+    }
+}
+
+fn lex_str(lex: &mut LogosLexer<Token>) -> Option<String> {
     Some(lex.slice().parse::<String>().ok()?)
 }
 

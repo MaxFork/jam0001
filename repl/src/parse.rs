@@ -76,7 +76,10 @@ impl<'source> Parser<'source> {
             Token::True => Value::Bool(true),
             Token::False => Value::Bool(false),
             Token::Num => Value::Num(self.lexer.slice().parse()?),
-            Token::Str => Value::Str(self.lexer.slice().into()),
+            Token::Str => {
+                let slice = self.lexer.slice();
+                Value::Str(slice[1..slice.len() - 1].into())
+            }
             Token::Null => Value::Null,
             _ => unreachable!(),
         };
@@ -217,6 +220,22 @@ mod tests {
                 }),
                 op: Token::Minus,
                 right: Box::new(Expr::Literal(Value::Num(4f64))),
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn strings() -> Result<(), Box<dyn std::error::Error>> {
+        let program = r#" "foo" + "bar" "#;
+        let mut parser = Parser::new(program);
+
+        assert_eq!(
+            parser.parse()?,
+            Expr::Binary {
+                left: Box::new(Expr::Literal(Value::Str("foo".to_string()))),
+                op: Token::Plus,
+                right: Box::new(Expr::Literal(Value::Str("bar".to_string())))
             }
         );
         Ok(())

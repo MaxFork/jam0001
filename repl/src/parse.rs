@@ -1,22 +1,7 @@
-use crate::ast::Value;
+use crate::ast::{Expr, Value};
 use crate::lex::{Lexer, Token};
 use crate::pratt::{get_rule, ParseFn, Precedence};
 use thiserror::Error;
-
-#[derive(Debug, PartialEq)]
-pub enum Expr {
-    Binary {
-        left: Box<Expr>,
-        op: Token,
-        right: Box<Expr>,
-    },
-    Unary {
-        op: Token,
-        expr: Box<Expr>,
-    },
-    Literal(Value),
-    Grouping(Box<Expr>),
-}
 
 #[derive(Error, Debug)]
 pub enum ParserError {

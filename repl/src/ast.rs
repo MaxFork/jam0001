@@ -1,4 +1,20 @@
+use crate::lex::Token;
 use std::fmt;
+
+#[derive(Debug, PartialEq)]
+pub enum Expr {
+    Binary {
+        left: Box<Expr>,
+        op: Token,
+        right: Box<Expr>,
+    },
+    Unary {
+        op: Token,
+        expr: Box<Expr>,
+    },
+    Literal(Value),
+    Grouping(Box<Expr>),
+}
 
 #[derive(PartialEq)]
 pub enum Value {

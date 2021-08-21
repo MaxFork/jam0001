@@ -1,4 +1,4 @@
-use logos::{Lexer as LogosLexer, Logos};
+use logos::{Lexer as LogosLexer, Logos, Span};
 use std::fmt;
 
 pub struct Lexer<'source> {
@@ -18,6 +18,14 @@ impl<'source> Lexer<'source> {
         let lexer = &mut self.lexer;
         self.peeked.get_or_insert_with(|| lexer.next()).as_ref()
     }
+
+    pub fn span(&mut self) -> Span {
+        self.lexer.span()
+    }
+
+    pub fn slice(&mut self) -> &str {
+        self.lexer.slice()
+    }
 }
 
 impl<'source> Iterator for Lexer<'source> {
@@ -30,10 +38,6 @@ impl<'source> Iterator for Lexer<'source> {
             self.lexer.next()
         }
     }
-}
-
-fn lex_str(lex: &mut LogosLexer<Token>) -> Option<String> {
-    Some(lex.slice().parse::<String>().ok()?)
 }
 
 #[rustfmt::skip]
@@ -86,17 +90,17 @@ pub enum Token {
 	#[token("else")] Else,
 
     // Literals
-    #[regex(r"#[^\n\r]*", lex_str)]
-    Comment(String),
+    #[regex(r"#[^\n\r]*")]
+    Comment,
 
-    #[regex(r"[_A-z]\w*", lex_str)]
-    Ident(String),
+    #[regex(r"[_A-z]\w*")]
+    Ident,
 
-    #[regex(r#""([^"\\]|\\t|\\u|\\n|\\")*""#, lex_str)]
-    Str(String),
+    #[regex(r#""([^"\\]|\\t|\\u|\\n|\\")*""#)]
+    Str,
 
-    #[regex(r"\d+(\.*\d+)?", lex_str)]
-    Num(String),
+    #[regex(r"\d+(\.*\d+)?")]
+    Num,
 
     #[error]
     #[regex(r"[ \t\n\f]+", logos::skip)]
@@ -119,19 +123,26 @@ mod tests {
             # comment
             let foo = 1 + 2
             ";
-        let tokens = Lexer::new(program).collect::<Vec<_>>();
+        let mut lex = Lexer::new(program);
 
-        assert_eq!(
-            tokens,
-            vec![
-                Token::Comment("# comment".to_string()),
-                Token::Let,
-                Token::Ident("foo".to_string()),
-                Token::Equal,
-                Token::Num("1".to_string()),
-                Token::Plus,
-                Token::Num("2".to_string()),
-            ]
-        );
+        assert_eq!(lex.next(), Some(Token::Comment));
+        assert_eq!(lex.slice(), "# comment");
+
+        assert_eq!(lex.next(), Some(Token::Let));
+
+        assert_eq!(lex.next(), Some(Token::Ident));
+        assert_eq!(lex.slice(), "foo");
+
+        assert_eq!(lex.next(), Some(Token::Equal));
+
+        assert_eq!(lex.next(), Some(Token::Num));
+        assert_eq!(lex.slice(), "1");
+
+        assert_eq!(lex.next(), Some(Token::Plus));
+
+        assert_eq!(lex.next(), Some(Token::Num));
+        assert_eq!(lex.slice(), "2");
+
+        assert_eq!(lex.next(), None);
     }
 }

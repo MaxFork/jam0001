@@ -24,7 +24,9 @@ pub enum Expr {
     },
     Literal(Value),
     Grouping(Box<Expr>),
+
     Variable(String),
+    Assignment(String, Box<Expr>),
 }
 
 #[derive(PartialEq)]

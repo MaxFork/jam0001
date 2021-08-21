@@ -127,7 +127,15 @@ impl<'source> Parser<'source> {
     }
 
     fn variable(&mut self) -> Result<Expr, ParserError> {
-        Ok(Expr::Variable(self.lexer.slice().to_string()))
+        let name = self.lexer.slice().to_string();
+
+        self.lexer.next();
+        if self.par(&[Token::Equal]) {
+            self.lexer.next();
+            let value = self.expression()?;
+            return Ok(Expr::Assignment(name, Box::new(value)));
+        }
+        Ok(Expr::Variable(name))
     }
 
     fn parse_precedence(&mut self, prec: Precedence) -> Result<Expr, ParserError> {
@@ -302,6 +310,21 @@ mod tests {
         assert_eq!(
             parser.parse()?,
             Stmt::Expr(Expr::Variable("foo".to_string()))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn assignment_expression() -> Result<(), Box<dyn std::error::Error>> {
+        let program = r#" foo = "bar" "#;
+        let mut parser = Parser::new(program);
+
+        assert_eq!(
+            parser.parse()?,
+            Stmt::Expr(Expr::Assignment(
+                "foo".to_string(),
+                Box::new(Expr::Literal(Value::Str("bar".to_string())))
+            ))
         );
         Ok(())
     }

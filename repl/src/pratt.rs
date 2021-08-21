@@ -25,6 +25,7 @@ pub enum ParseFn {
     Grouping,
 
     Literal,
+    Variable,
 }
 
 pub struct ParseRule {
@@ -90,6 +91,11 @@ pub fn get_rule(operator: &Token) -> ParseRule {
         },
         Token::True | Token::False | Token::Num | Token::Str | Token::Null => ParseRule {
             prefix: ParseFn::Literal,
+            infix: ParseFn::None,
+            precedence: Precedence::None,
+        },
+        Token::Ident => ParseRule {
+            prefix: ParseFn::Variable,
             infix: ParseFn::None,
             precedence: Precedence::None,
         },

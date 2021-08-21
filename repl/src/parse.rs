@@ -55,7 +55,7 @@ impl<'source> Parser<'source> {
             value = Some(self.expression()?);
         }
 
-        Ok(Stmt::Var { name, value })
+        Ok(Stmt::VariableDeclaration { name, value })
     }
 
     fn statement(&mut self) -> ParserResult {
@@ -126,6 +126,10 @@ impl<'source> Parser<'source> {
         Ok(value)
     }
 
+    fn variable(&mut self) -> Result<Expr, ParserError> {
+        Ok(Expr::Variable(self.lexer.slice().to_string()))
+    }
+
     fn parse_precedence(&mut self, prec: Precedence) -> Result<Expr, ParserError> {
         let peek = self.lexer.peek().unwrap();
         let prefix_rule = get_rule(peek).prefix;
@@ -150,6 +154,7 @@ impl<'source> Parser<'source> {
             ParseFn::Binary => self.binary(operand.ok_or(ParserError::ExpectedExpression)?),
             ParseFn::Grouping => self.grouping(),
             ParseFn::Literal => self.primary(),
+            ParseFn::Variable => self.variable(),
             ParseFn::None => unreachable!(),
         }
     }
@@ -285,6 +290,18 @@ mod tests {
                 op: Token::Plus,
                 right: Box::new(Expr::Literal(Value::Str("bar".to_string())))
             })
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn variable_expression() -> Result<(), Box<dyn std::error::Error>> {
+        let program = "foo";
+        let mut parser = Parser::new(program);
+
+        assert_eq!(
+            parser.parse()?,
+            Stmt::Expr(Expr::Variable("foo".to_string()))
         );
         Ok(())
     }

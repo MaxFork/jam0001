@@ -4,7 +4,7 @@ use std::fmt;
 #[derive(Debug, PartialEq)]
 pub enum Stmt {
     // Declarations
-    Var { name: String, value: Option<Expr> },
+    VariableDeclaration { name: String, value: Option<Expr> },
 
     // Not Declaration
     Comment(String),
@@ -24,6 +24,7 @@ pub enum Expr {
     },
     Literal(Value),
     Grouping(Box<Expr>),
+    Variable(String),
 }
 
 #[derive(PartialEq)]

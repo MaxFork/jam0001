@@ -1,7 +1,7 @@
 use logos::{Lexer as LogosLexer, Logos};
 use std::fmt;
 
-struct Lexer<'source> {
+pub struct Lexer<'source> {
     lexer: LogosLexer<'source, Token>,
     peeked: Option<Option<Token>>,
 }
@@ -119,7 +119,7 @@ mod tests {
             # comment
             let foo = 1 + 2
             ";
-        let tokens = Token::lexer(program).collect::<Vec<_>>();
+        let tokens = Lexer::new(program).collect::<Vec<_>>();
 
         assert_eq!(
             tokens,

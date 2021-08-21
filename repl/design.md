@@ -17,9 +17,9 @@ fn test() {
 1. Comments start with `#`.
 2. Comments start with `>` (after #), are executed normally when not attached to a function.
 3. When attached to a function, `>` comment get executed only after the function has returned successfully.
-   -. `$` is the return value from that function.
-   -. `!` comments are executed when the function throws.
-4. Whether to run comments or not, can be enabled/disabled by a flag to the program.
+   - `$` is the return value from that function.
+   - `!` comments are executed when the function throws.
+4. Whether to run comments or not, can be enabled/disabled by a flag supplied the program.
 5. There should be a certain function in stdlib that should read/manipulate the comments.
 6. Comments can be valid values, when used with it's own identifiers, or types.
 

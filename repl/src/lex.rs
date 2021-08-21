@@ -40,7 +40,7 @@ pub enum Token {
     // Keywords
 	#[token("let")] Let,
 	#[token("const")] Const,
-	#[token("fun")] Fun,
+	#[token("fn")] Func,
 
 	#[token("null")] Null,
 	#[token("true")] True,

@@ -2,6 +2,12 @@ use crate::lex::Token;
 use std::fmt;
 
 #[derive(Debug, PartialEq)]
+pub enum Stmt {
+    Comment(String),
+    Expr(Expr),
+}
+
+#[derive(Debug, PartialEq)]
 pub enum Expr {
     Binary {
         left: Box<Expr>,

@@ -1,4 +1,4 @@
-use crate::ast::{Expr, Value};
+use crate::ast::{Expr, Stmt, Value};
 use crate::lex::{Lexer, Token};
 use crate::pratt::{get_rule, ParseFn, Precedence};
 use thiserror::Error;
@@ -18,7 +18,7 @@ pub enum ParserError {
     TypeCoercion(#[from] std::num::ParseFloatError),
 }
 
-pub type ParserResult = Result<Expr, ParserError>;
+pub type ParserResult = Result<Stmt, ParserError>;
 
 pub struct Parser<'source> {
     lexer: Lexer<'source>,
@@ -32,14 +32,27 @@ impl<'source> Parser<'source> {
     }
 
     pub fn parse(&mut self) -> ParserResult {
-        self.expression()
+        self.declaration()
     }
 
-    fn expression(&mut self) -> ParserResult {
+    fn declaration(&mut self) -> ParserResult {
+        self.statement()
+    }
+
+    fn statement(&mut self) -> ParserResult {
+        if self.par(&[Token::Comment]) {
+            let comment = &self.lexer.slice()[1..].trim();
+            return Ok(Stmt::Comment(comment.to_string()));
+        }
+
+        Ok(Stmt::Expr(self.expression()?))
+    }
+
+    fn expression(&mut self) -> Result<Expr, ParserError> {
         self.parse_precedence(Precedence::Assignment)
     }
 
-    fn binary(&mut self, left: Box<Expr>) -> ParserResult {
+    fn binary(&mut self, left: Box<Expr>) -> Result<Expr, ParserError> {
         let op = self.must_be_next(&[
             Token::Plus,
             Token::Minus,
@@ -57,13 +70,13 @@ impl<'source> Parser<'source> {
         Ok(Expr::Binary { left, op, right })
     }
 
-    fn unary(&mut self) -> ParserResult {
+    fn unary(&mut self) -> Result<Expr, ParserError> {
         let op = self.must_be_next(&[Token::Bang, Token::Minus])?;
         let expr = Box::new(self.parse_precedence(Precedence::Unary)?);
         Ok(Expr::Unary { op, expr })
     }
 
-    fn primary(&mut self) -> ParserResult {
+    fn primary(&mut self) -> Result<Expr, ParserError> {
         let value = self.must_be_next(&[
             Token::True,
             Token::False,
@@ -87,14 +100,14 @@ impl<'source> Parser<'source> {
         Ok(Expr::Literal(value))
     }
 
-    fn grouping(&mut self) -> ParserResult {
+    fn grouping(&mut self) -> Result<Expr, ParserError> {
         let _open_paren = self.must_be_next(&[Token::LeftParen])?; // will use this later for errors
         let value = Expr::Grouping(Box::new(self.expression()?));
         self.must_be_next(&[Token::RightParen])?;
         Ok(value)
     }
 
-    fn parse_precedence(&mut self, prec: Precedence) -> ParserResult {
+    fn parse_precedence(&mut self, prec: Precedence) -> Result<Expr, ParserError> {
         let peek = self.lexer.peek().unwrap();
         let prefix_rule = get_rule(peek).prefix;
         let mut left = self.parse_by_rule(prefix_rule, None)?;
@@ -108,7 +121,11 @@ impl<'source> Parser<'source> {
         Ok(left)
     }
 
-    fn parse_by_rule(&mut self, rule: ParseFn, operand: Option<Box<Expr>>) -> ParserResult {
+    fn parse_by_rule(
+        &mut self,
+        rule: ParseFn,
+        operand: Option<Box<Expr>>,
+    ) -> Result<Expr, ParserError> {
         match rule {
             ParseFn::Unary => self.unary(),
             ParseFn::Binary => self.binary(operand.ok_or(ParserError::ExpectedExpression)?),
@@ -126,7 +143,7 @@ impl<'source> Parser<'source> {
     // since `match` is a reserved keyword in rust
     // I google-translated `match` to latin and
     // it says `par` so here it is
-    fn _par(&mut self, tokens: &[Token]) -> bool {
+    fn par(&mut self, tokens: &[Token]) -> bool {
         if let Some(token) = self.lexer.peek() {
             return tokens.iter().any(|k| k == token);
         }
@@ -150,11 +167,23 @@ mod tests {
     use super::*;
 
     #[test]
+    fn comments() -> Result<(), Box<dyn std::error::Error>> {
+        let program = "# > first class :)";
+        let mut parser = Parser::new(program);
+
+        assert_eq!(
+            parser.parse()?,
+            Stmt::Comment("> first class :)".to_string())
+        );
+        Ok(())
+    }
+
+    #[test]
     fn literal() -> Result<(), Box<dyn std::error::Error>> {
         let program = "1";
         let mut parser = Parser::new(program);
 
-        assert_eq!(parser.parse()?, Expr::Literal(Value::Num(1f64)));
+        assert_eq!(parser.parse()?, Stmt::Expr(Expr::Literal(Value::Num(1f64))));
         Ok(())
     }
 
@@ -165,10 +194,10 @@ mod tests {
 
         assert_eq!(
             parser.parse()?,
-            Expr::Unary {
+            Stmt::Expr(Expr::Unary {
                 op: Token::Minus,
                 expr: Box::new(Expr::Literal(Value::Num(1f64)))
-            }
+            })
         );
         Ok(())
     }
@@ -180,11 +209,11 @@ mod tests {
 
         assert_eq!(
             parser.parse()?,
-            Expr::Binary {
+            Stmt::Expr(Expr::Binary {
                 left: Box::new(Expr::Literal(Value::Num(1f64))),
                 op: Token::Plus,
                 right: Box::new(Expr::Literal(Value::Num(2f64)))
-            }
+            })
         );
         Ok(())
     }
@@ -196,7 +225,7 @@ mod tests {
 
         assert_eq!(
             parser.parse()?,
-            Expr::Grouping(Box::new(Expr::Literal(Value::Num(1f64))))
+            Stmt::Expr(Expr::Grouping(Box::new(Expr::Literal(Value::Num(1f64)))))
         );
         Ok(())
     }
@@ -208,7 +237,7 @@ mod tests {
 
         assert_eq!(
             parser.parse()?,
-            Expr::Binary {
+            Stmt::Expr(Expr::Binary {
                 left: Box::new(Expr::Binary {
                     left: Box::new(Expr::Literal(Value::Num(1f64))),
                     op: Token::Plus,
@@ -220,7 +249,7 @@ mod tests {
                 }),
                 op: Token::Minus,
                 right: Box::new(Expr::Literal(Value::Num(4f64))),
-            }
+            })
         );
         Ok(())
     }
@@ -232,11 +261,11 @@ mod tests {
 
         assert_eq!(
             parser.parse()?,
-            Expr::Binary {
+            Stmt::Expr(Expr::Binary {
                 left: Box::new(Expr::Literal(Value::Str("foo".to_string()))),
                 op: Token::Plus,
                 right: Box::new(Expr::Literal(Value::Str("bar".to_string())))
-            }
+            })
         );
         Ok(())
     }

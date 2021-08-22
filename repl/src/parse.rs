@@ -73,6 +73,10 @@ impl<'source> Parser<'source> {
             return self.if_statement();
         }
 
+        if self.par(&[Token::Loop]) {
+            return self.loop_statement();
+        }
+
         if self.par(&[Token::LeftBrace]) {
             return self.block_statement();
         }
@@ -103,6 +107,19 @@ impl<'source> Parser<'source> {
             then,
             otherwise,
         })
+    }
+
+    fn loop_statement(&mut self) -> Result<Stmt, ParserError> {
+        self.lexer.next().unwrap();
+
+        let mut label = None;
+        if self.par(&[Token::Ident]) {
+            label = Some(self.lexer.slice().to_string());
+            self.lexer.next().unwrap();
+        }
+        let body = Box::new(self.block_statement()?);
+
+        Ok(Stmt::Loop { label, body })
     }
 
     fn block_statement(&mut self) -> Result<Stmt, ParserError> {
@@ -488,6 +505,48 @@ mod tests {
                 otherwise: Some(Box::new(Stmt::Block(vec![Stmt::Comment(
                     "do nothing".to_string(),
                 )])))
+            }]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn loop_statement() -> Result<(), Box<dyn std::error::Error>> {
+        let program = r#"
+        loop { 
+            # > sudo shutdown
+        }
+        "#;
+        let mut parser = Parser::new(program);
+
+        assert_eq!(
+            parser.parse()?,
+            vec![Stmt::Loop {
+                label: None,
+                body: Box::new(Stmt::Block(vec![Stmt::Comment(
+                    "> sudo shutdown".to_string(),
+                )])),
+            }]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn labelled_loop_statement() -> Result<(), Box<dyn std::error::Error>> {
+        let program = r#"
+        loop label { 
+            # > sudo shutdown
+        }
+        "#;
+        let mut parser = Parser::new(program);
+
+        assert_eq!(
+            parser.parse()?,
+            vec![Stmt::Loop {
+                label: Some("label".to_string()),
+                body: Box::new(Stmt::Block(vec![Stmt::Comment(
+                    "> sudo shutdown".to_string(),
+                )])),
             }]
         );
         Ok(())

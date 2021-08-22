@@ -15,6 +15,10 @@ pub enum Stmt {
         then: Box<Stmt>,
         otherwise: Option<Box<Stmt>>,
     },
+    Loop {
+        label: Option<String>,
+        body: Box<Stmt>,
+    },
     Block(Vec<Stmt>),
     Comment(String),
     Expr(Expr),

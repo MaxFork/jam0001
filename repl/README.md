@@ -3,9 +3,10 @@
 ## Example
 
 ```
-if !true { 
+if 5 < 3 { 
     # > sudo shutdown
-} else {
+}
+else {
     # > echo "hi"
     # comment
 }
@@ -16,3 +17,9 @@ if !true {
 ```
 $ cargo run
 ```
+
+## Steps
+
+- [ ] Lexer
+- [ ] Parser
+- [ ] AST

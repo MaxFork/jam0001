@@ -66,12 +66,36 @@ impl<'source> Parser<'source> {
 
     fn statement(&mut self) -> Result<Stmt, ParserError> {
         if self.par(&[Token::Comment]) {
-            self.lexer.next();
-            let comment = self.lexer.slice()[1..].trim();
-            return Ok(Stmt::Comment(comment.to_string()));
+            return self.comment_statement();
+        }
+
+        if self.par(&[Token::LeftBrace]) {
+            return self.block_statement();
         }
 
         Ok(Stmt::Expr(self.expression()?))
+    }
+
+    fn comment_statement(&mut self) -> Result<Stmt, ParserError> {
+        self.lexer.next().unwrap();
+        let comment = self.lexer.slice()[1..].trim();
+        return Ok(Stmt::Comment(comment.to_string()));
+    }
+
+    fn block_statement(&mut self) -> Result<Stmt, ParserError> {
+        self.lexer.next().unwrap();
+        let mut statements = Vec::new();
+
+        while let Some(peek) = self.lexer.peek() {
+            if peek == &Token::RightBrace {
+                break;
+            }
+
+            statements.push(self.declaration()?);
+        }
+
+        let _right_paren = self.must_be_next(&[Token::RightBrace])?; // will be used later for error handling
+        Ok(Stmt::Block(statements))
     }
 
     fn expression(&mut self) -> Result<Expr, ParserError> {
@@ -339,6 +363,44 @@ mod tests {
                 "foo".to_string(),
                 Box::new(Expr::Literal(Value::Str("bar".to_string())))
             ))]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn variable_declaration() -> Result<(), Box<dyn std::error::Error>> {
+        let program = r#" let foo = "bar" "#;
+        let mut parser = Parser::new(program);
+
+        assert_eq!(
+            parser.parse()?,
+            vec![Stmt::VariableDeclaration {
+                name: "foo".to_string(),
+                value: Some(Expr::Literal(Value::Str("bar".to_string())))
+            }]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn block_statement() -> Result<(), Box<dyn std::error::Error>> {
+        let program = r#"
+        { 
+            let foo = "bar" 
+            foo
+        }
+        "#;
+        let mut parser = Parser::new(program);
+
+        assert_eq!(
+            parser.parse()?,
+            vec![Stmt::Block(vec![
+                Stmt::VariableDeclaration {
+                    name: "foo".to_string(),
+                    value: Some(Expr::Literal(Value::Str("bar".to_string())))
+                },
+                Stmt::Expr(Expr::Variable("foo".to_string()))
+            ])]
         );
         Ok(())
     }

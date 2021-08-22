@@ -7,6 +7,7 @@ pub enum Stmt {
     VariableDeclaration { name: String, value: Option<Expr> },
 
     // Not Declaration
+    Block(Vec<Stmt>),
     Comment(String),
     Expr(Expr),
 }

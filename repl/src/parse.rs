@@ -46,6 +46,10 @@ impl<'source> Parser<'source> {
             return self.variable_declaration();
         }
 
+        if self.par(&[Token::Const]) {
+            return self.constant_declaration();
+        }
+
         self.statement()
     }
 
@@ -62,6 +66,18 @@ impl<'source> Parser<'source> {
         }
 
         Ok(Stmt::VariableDeclaration { name, value })
+    }
+
+    fn constant_declaration(&mut self) -> Result<Stmt, ParserError> {
+        let _keyword = self.lexer.next(); // will use this later for error prompts
+        self.must_be_next(&[Token::Ident])?;
+        let name = self.lexer.slice().to_string();
+
+        self.must_be_next(&[Token::Equal])?;
+
+        let value = self.expression()?;
+
+        Ok(Stmt::ConstDeclaration { name, value })
     }
 
     fn statement(&mut self) -> Result<Stmt, ParserError> {
@@ -451,6 +467,21 @@ mod tests {
             vec![Stmt::VariableDeclaration {
                 name: "foo".to_string(),
                 value: Some(Expr::Literal(Value::Str("bar".to_string())))
+            }]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn const_declaration() -> Result<(), Box<dyn std::error::Error>> {
+        let program = r#" const foo = "bar" "#;
+        let mut parser = Parser::new(program);
+
+        assert_eq!(
+            parser.parse()?,
+            vec![Stmt::ConstDeclaration {
+                name: "foo".to_string(),
+                value: Expr::Literal(Value::Str("bar".to_string()))
             }]
         );
         Ok(())

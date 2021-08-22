@@ -8,6 +8,10 @@ pub enum Stmt {
         name: String,
         value: Option<Expr>,
     },
+    ConstDeclaration {
+        name: String,
+        value: Expr,
+    },
 
     // Not Declaration
     If {

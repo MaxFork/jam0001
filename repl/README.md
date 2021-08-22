@@ -1,11 +1,5 @@
 # Repl
 
-## Using
-
-```
-$ cargo run
-```
-
 ## Example
 
 ```
@@ -15,4 +9,10 @@ if !true {
     # > echo "hi"
     # comment
 }
+```
+
+## Using
+
+```
+$ cargo run
 ```

@@ -4,9 +4,17 @@ use std::fmt;
 #[derive(Debug, PartialEq)]
 pub enum Stmt {
     // Declarations
-    VariableDeclaration { name: String, value: Option<Expr> },
+    VariableDeclaration {
+        name: String,
+        value: Option<Expr>,
+    },
 
     // Not Declaration
+    If {
+        condition: Expr,
+        then: Box<Stmt>,
+        otherwise: Option<Box<Stmt>>,
+    },
     Block(Vec<Stmt>),
     Comment(String),
     Expr(Expr),

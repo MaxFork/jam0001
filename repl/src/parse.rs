@@ -69,6 +69,10 @@ impl<'source> Parser<'source> {
             return self.comment_statement();
         }
 
+        if self.par(&[Token::If]) {
+            return self.if_statement();
+        }
+
         if self.par(&[Token::LeftBrace]) {
             return self.block_statement();
         }
@@ -79,7 +83,26 @@ impl<'source> Parser<'source> {
     fn comment_statement(&mut self) -> Result<Stmt, ParserError> {
         self.lexer.next().unwrap();
         let comment = self.lexer.slice()[1..].trim();
-        return Ok(Stmt::Comment(comment.to_string()));
+        Ok(Stmt::Comment(comment.to_string()))
+    }
+
+    fn if_statement(&mut self) -> Result<Stmt, ParserError> {
+        self.lexer.next().unwrap();
+        let condition = self.expression()?;
+
+        let then = Box::new(self.block_statement()?);
+
+        let mut otherwise = None;
+        if self.par(&[Token::Else]) {
+            self.lexer.next().unwrap();
+            otherwise = Some(Box::new(self.block_statement()?));
+        }
+
+        Ok(Stmt::If {
+            condition,
+            then,
+            otherwise,
+        })
     }
 
     fn block_statement(&mut self) -> Result<Stmt, ParserError> {
@@ -386,6 +409,7 @@ mod tests {
     fn block_statement() -> Result<(), Box<dyn std::error::Error>> {
         let program = r#"
         { 
+            # comment 
             let foo = "bar" 
             foo
         }
@@ -395,12 +419,42 @@ mod tests {
         assert_eq!(
             parser.parse()?,
             vec![Stmt::Block(vec![
+                Stmt::Comment("comment".to_string()),
                 Stmt::VariableDeclaration {
                     name: "foo".to_string(),
                     value: Some(Expr::Literal(Value::Str("bar".to_string())))
                 },
                 Stmt::Expr(Expr::Variable("foo".to_string()))
             ])]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn if_statement() -> Result<(), Box<dyn std::error::Error>> {
+        let program = r#"
+        if !true { 
+            # > sudo shutdown
+        } else {
+            # do nothing
+        }
+        "#;
+        let mut parser = Parser::new(program);
+
+        assert_eq!(
+            parser.parse()?,
+            vec![Stmt::If {
+                condition: Expr::Unary {
+                    op: Token::Bang,
+                    expr: Box::new(Expr::Literal(Value::Bool(true)))
+                },
+                then: Box::new(Stmt::Block(vec![Stmt::Comment(
+                    "> sudo shutdown".to_string(),
+                )])),
+                otherwise: Some(Box::new(Stmt::Block(vec![Stmt::Comment(
+                    "do nothing".to_string(),
+                )])))
+            }]
         );
         Ok(())
     }

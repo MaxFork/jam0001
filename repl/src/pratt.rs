@@ -26,6 +26,9 @@ pub enum ParseFn {
 
     Literal,
     Variable,
+
+    And,
+    Or,
 }
 
 pub struct ParseRule {
@@ -98,6 +101,16 @@ pub fn get_rule(operator: &Token) -> ParseRule {
             prefix: ParseFn::Variable,
             infix: ParseFn::None,
             precedence: Precedence::None,
+        },
+        Token::And => ParseRule {
+            prefix: ParseFn::None,
+            infix: ParseFn::And,
+            precedence: Precedence::And,
+        },
+        Token::Or => ParseRule {
+            prefix: ParseFn::None,
+            infix: ParseFn::Or,
+            precedence: Precedence::Or,
         },
         _ => ParseRule {
             prefix: ParseFn::None,

@@ -192,6 +192,17 @@ impl<'source> Parser<'source> {
         Ok(Expr::Variable(name))
     }
 
+    fn logical(&mut self, left: Box<Expr>) -> Result<Expr, ParserError> {
+        let op = self.must_be_next(&[Token::And, Token::Or])?;
+        let precedence = match op {
+            Token::And => Precedence::And,
+            Token::Or => Precedence::Or,
+            _ => unreachable!(),
+        };
+        let right = Box::new(self.parse_precedence(precedence)?);
+        Ok(Expr::Binary { left, op, right })
+    }
+
     fn parse_precedence(&mut self, prec: Precedence) -> Result<Expr, ParserError> {
         let peek = self.lexer.peek().unwrap();
         let prefix_rule = get_rule(peek).prefix;
@@ -217,6 +228,9 @@ impl<'source> Parser<'source> {
             ParseFn::Grouping => self.grouping(),
             ParseFn::Literal => self.primary(),
             ParseFn::Variable => self.variable(),
+            ParseFn::And | ParseFn::Or => {
+                self.logical(operand.ok_or(ParserError::ExpectedExpression)?)
+            }
             ParseFn::None => Err(ParserError::UnexpectedToken(
                 self.lexer.next().ok_or(ParserError::ExpectedExpression)?,
             )),
@@ -304,6 +318,26 @@ mod tests {
                 left: Box::new(Expr::Literal(Value::Num(1f64))),
                 op: Token::Plus,
                 right: Box::new(Expr::Literal(Value::Num(2f64)))
+            })]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn logical() -> Result<(), Box<dyn std::error::Error>> {
+        let program = "true || false && true";
+        let mut parser = Parser::new(program);
+
+        assert_eq!(
+            parser.parse()?,
+            vec![Stmt::Expr(Expr::Binary {
+                left: Box::new(Expr::Literal(Value::Bool(true))),
+                op: Token::Or,
+                right: Box::new(Expr::Binary {
+                    left: Box::new(Expr::Literal(Value::Bool(false))),
+                    op: Token::And,
+                    right: Box::new(Expr::Literal(Value::Bool(true)))
+                })
             })]
         );
         Ok(())

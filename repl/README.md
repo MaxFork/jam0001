@@ -12,5 +12,7 @@ $ cargo run
 if !true { 
     # > sudo shutdown
 } else {
+    # > echo "hi"
+    # comment
 }
 ```

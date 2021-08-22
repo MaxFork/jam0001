@@ -1,2 +1,7 @@
 # Repl
 
+## Using
+
+```
+$ cargo run
+```

@@ -1,5 +1,7 @@
 # Repl
 
+This is a script programming language with Repl environment.
+
 ## Example
 
 ```

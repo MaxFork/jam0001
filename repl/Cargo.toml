@@ -8,5 +8,4 @@ logos = "0.12.0"
 structopt = "0.3.22"
 thiserror = "1.0.26"
 rustyline = "9.0.0"
-serde = { version = "1.0", features = ["derive"] }
-serde_yaml = "0.8"
+rustyline-derive = "0.5.0"

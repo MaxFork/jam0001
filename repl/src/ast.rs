@@ -12,6 +12,11 @@ pub enum Stmt {
         name: String,
         value: Expr,
     },
+    FnDeclaration {
+        name: String,
+        params: Vec<String>,
+        body: Box<Stmt>,
+    },
 
     // Not Declaration
     If {

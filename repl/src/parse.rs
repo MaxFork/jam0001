@@ -50,6 +50,10 @@ impl<'source> Parser<'source> {
             return self.constant_declaration();
         }
 
+        if self.par(&[Token::Func]) {
+            return self.function_declaration();
+        }
+
         self.statement()
     }
 
@@ -78,6 +82,35 @@ impl<'source> Parser<'source> {
         let value = self.expression()?;
 
         Ok(Stmt::ConstDeclaration { name, value })
+    }
+
+    fn function_declaration(&mut self) -> Result<Stmt, ParserError> {
+        self.lexer.next().unwrap();
+
+        let _name_token = self.must_be_next(&[Token::Ident])?; // will be used later for error reporting
+        let name = self.lexer.slice().to_string();
+
+        let _left_paren = self.must_be_next(&[Token::LeftParen])?;
+
+        let mut params = Vec::new();
+        if !self.par(&[Token::RightParen]) {
+            while {
+                self.must_be_next(&[Token::Ident])?;
+                params.push(self.lexer.slice().to_string());
+                if self.par(&[Token::Comma]) {
+                    self.lexer.next().is_some()
+                } else {
+                    false
+                }
+            } {}
+        }
+
+        let _right_paren = self.must_be_next(&[Token::RightParen])?;
+        // ... params parsing
+
+        let body = Box::new(self.block_statement()?);
+
+        Ok(Stmt::FnDeclaration { name, params, body })
     }
 
     fn statement(&mut self) -> Result<Stmt, ParserError> {
@@ -482,6 +515,26 @@ mod tests {
             vec![Stmt::ConstDeclaration {
                 name: "foo".to_string(),
                 value: Expr::Literal(Value::Str("bar".to_string()))
+            }]
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn function_declaration() -> Result<(), Box<dyn std::error::Error>> {
+        let program = r#"
+        fn main(args) { 
+            # comment 
+        }
+        "#;
+        let mut parser = Parser::new(program);
+
+        assert_eq!(
+            parser.parse()?,
+            vec![Stmt::FnDeclaration {
+                name: "main".to_string(),
+                params: vec!["args".to_string()],
+                body: Box::new(Stmt::Block(vec![Stmt::Comment("comment".to_string()),]))
             }]
         );
         Ok(())

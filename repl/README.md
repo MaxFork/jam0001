@@ -2,6 +2,8 @@
 
 This is a script programming language with Repl environment, This has some features and the ability to execute external commands and use the output.
 
+By the way, You are able to write useful commands inside a command and run that. So as you see the comments are not useless in this syntax.
+
 ## Example
 
 ```

@@ -14,6 +14,9 @@ pub enum ParserError {
     #[error("expected an expression")]
     ExpectedExpression,
 
+    #[error("invalid value")]
+    InvalidValue,
+
     #[error("type coercion error")]
     TypeCoercion(#[from] std::num::ParseFloatError),
 }
@@ -113,7 +116,7 @@ impl<'source> Parser<'source> {
                 Value::Str(slice[1..slice.len() - 1].into())
             }
             Token::Null => Value::Null,
-            _ => unreachable!(),
+            _ => return Err(ParserError::InvalidValue),
         };
 
         Ok(Expr::Literal(value))
@@ -163,7 +166,9 @@ impl<'source> Parser<'source> {
             ParseFn::Grouping => self.grouping(),
             ParseFn::Literal => self.primary(),
             ParseFn::Variable => self.variable(),
-            ParseFn::None => unreachable!(),
+            ParseFn::None => Err(ParserError::UnexpectedToken(
+                self.lexer.next().ok_or(ParserError::ExpectedExpression)?,
+            )),
         }
     }
 }

@@ -21,8 +21,6 @@ pub enum ParserError {
     TypeCoercion(#[from] std::num::ParseFloatError),
 }
 
-pub type ParserResult = Result<Stmt, ParserError>;
-
 pub struct Parser<'source> {
     lexer: Lexer<'source>,
 }
@@ -34,11 +32,16 @@ impl<'source> Parser<'source> {
         }
     }
 
-    pub fn parse(&mut self) -> ParserResult {
-        self.declaration()
+    pub fn parse(&mut self) -> Result<Vec<Stmt>, ParserError> {
+        let mut statements = Vec::new();
+        while self.lexer.peek().is_some() {
+            let declaration = self.declaration()?;
+            statements.push(declaration);
+        }
+        Ok(statements)
     }
 
-    fn declaration(&mut self) -> ParserResult {
+    fn declaration(&mut self) -> Result<Stmt, ParserError> {
         if self.par(&[Token::Let]) {
             return self.variable_declaration();
         }
@@ -46,7 +49,7 @@ impl<'source> Parser<'source> {
         self.statement()
     }
 
-    fn variable_declaration(&mut self) -> ParserResult {
+    fn variable_declaration(&mut self) -> Result<Stmt, ParserError> {
         let _keyword = self.lexer.next(); // will use this later for error prompts
         self.must_be_next(&[Token::Ident])?;
         let name = self.lexer.slice().to_string();
@@ -61,9 +64,10 @@ impl<'source> Parser<'source> {
         Ok(Stmt::VariableDeclaration { name, value })
     }
 
-    fn statement(&mut self) -> ParserResult {
+    fn statement(&mut self) -> Result<Stmt, ParserError> {
         if self.par(&[Token::Comment]) {
-            let comment = &self.lexer.slice()[1..].trim();
+            self.lexer.next();
+            let comment = self.lexer.slice()[1..].trim();
             return Ok(Stmt::Comment(comment.to_string()));
         }
 
@@ -210,7 +214,7 @@ mod tests {
 
         assert_eq!(
             parser.parse()?,
-            Stmt::Comment("> first class :)".to_string())
+            vec![Stmt::Comment("> first class :)".to_string())]
         );
         Ok(())
     }
@@ -220,7 +224,10 @@ mod tests {
         let program = "1";
         let mut parser = Parser::new(program);
 
-        assert_eq!(parser.parse()?, Stmt::Expr(Expr::Literal(Value::Num(1f64))));
+        assert_eq!(
+            parser.parse()?,
+            vec![Stmt::Expr(Expr::Literal(Value::Num(1f64)))]
+        );
         Ok(())
     }
 
@@ -231,10 +238,10 @@ mod tests {
 
         assert_eq!(
             parser.parse()?,
-            Stmt::Expr(Expr::Unary {
+            vec![Stmt::Expr(Expr::Unary {
                 op: Token::Minus,
                 expr: Box::new(Expr::Literal(Value::Num(1f64)))
-            })
+            })]
         );
         Ok(())
     }
@@ -246,11 +253,11 @@ mod tests {
 
         assert_eq!(
             parser.parse()?,
-            Stmt::Expr(Expr::Binary {
+            vec![Stmt::Expr(Expr::Binary {
                 left: Box::new(Expr::Literal(Value::Num(1f64))),
                 op: Token::Plus,
                 right: Box::new(Expr::Literal(Value::Num(2f64)))
-            })
+            })]
         );
         Ok(())
     }
@@ -262,7 +269,9 @@ mod tests {
 
         assert_eq!(
             parser.parse()?,
-            Stmt::Expr(Expr::Grouping(Box::new(Expr::Literal(Value::Num(1f64)))))
+            vec![Stmt::Expr(Expr::Grouping(Box::new(Expr::Literal(
+                Value::Num(1f64)
+            ))))]
         );
         Ok(())
     }
@@ -274,7 +283,7 @@ mod tests {
 
         assert_eq!(
             parser.parse()?,
-            Stmt::Expr(Expr::Binary {
+            vec![Stmt::Expr(Expr::Binary {
                 left: Box::new(Expr::Binary {
                     left: Box::new(Expr::Literal(Value::Num(1f64))),
                     op: Token::Plus,
@@ -286,7 +295,7 @@ mod tests {
                 }),
                 op: Token::Minus,
                 right: Box::new(Expr::Literal(Value::Num(4f64))),
-            })
+            })]
         );
         Ok(())
     }
@@ -298,11 +307,11 @@ mod tests {
 
         assert_eq!(
             parser.parse()?,
-            Stmt::Expr(Expr::Binary {
+            vec![Stmt::Expr(Expr::Binary {
                 left: Box::new(Expr::Literal(Value::Str("foo".to_string()))),
                 op: Token::Plus,
                 right: Box::new(Expr::Literal(Value::Str("bar".to_string())))
-            })
+            })]
         );
         Ok(())
     }
@@ -314,7 +323,7 @@ mod tests {
 
         assert_eq!(
             parser.parse()?,
-            Stmt::Expr(Expr::Variable("foo".to_string()))
+            vec![Stmt::Expr(Expr::Variable("foo".to_string()))]
         );
         Ok(())
     }
@@ -326,10 +335,10 @@ mod tests {
 
         assert_eq!(
             parser.parse()?,
-            Stmt::Expr(Expr::Assignment(
+            vec![Stmt::Expr(Expr::Assignment(
                 "foo".to_string(),
                 Box::new(Expr::Literal(Value::Str("bar".to_string())))
-            ))
+            ))]
         );
         Ok(())
     }

@@ -1,6 +1,6 @@
 # Repl
 
-This is a script programming language with Repl environment.
+This is a script programming language with Repl environment, This has some features and the ability to execute external commands and use the output.
 
 ## Example
 

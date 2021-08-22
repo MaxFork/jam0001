@@ -20,6 +20,7 @@ $ cargo run
 
 ## Steps
 
-- [ ] Lexer
-- [ ] Parser
-- [ ] AST
+- [x] Lexer
+- [x] Parser
+- [x] AST
+- [ ] Interpreter or Generator
